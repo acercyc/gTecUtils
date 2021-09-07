@@ -14,13 +14,14 @@ class gTecDataset:
         self.hdf5 = h5py.File(filename, 'r')
         self.info = self.parser()
         self.data = self.info['RawData/Samples'].T
-        self.ch_names = list(
-            self.info['RawData/AcquisitionTaskDescription']['ChannelProperties']['ChannelName'])
+        self.ch_names = list(self.info['RawData/AcquisitionTaskDescription']['ChannelProperties']['ChannelName'])
         # self.ch_types = list(self.info['RawData/AcquisitionTaskDescription']['ChannelProperties']['ChannelType'])
         self.ch_types = ['eeg' for x in range(32)]
         self.sfreq = self.info['RawData/AcquisitionTaskDescription']['SamplingFrequency']
 
     def parser(self):
+        """ Parse g.tec hdr5 format using h5py and lxml
+        """        
         dataDict = {}
 
         def inner(name, obj):
@@ -44,6 +45,9 @@ class gTecDataset:
 
 
 def xmlParser(xmlObj):
+    """Parse xml string using lxml
+    Convert content into string or pandas DataFrame
+    """    
     xmlDict = {}
 
     def xmlParser_inner(xmlObj):
@@ -73,5 +77,3 @@ def xmlParser(xmlObj):
 
 if __name__ == "__main__":
     pass
-
-# %%
