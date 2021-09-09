@@ -2,7 +2,6 @@
 import mne
 import h5py
 import numpy as np
-import xml.etree.ElementTree as ET
 import pandas as pd
 from lxml import etree
 
@@ -13,9 +12,8 @@ class gTecDataset:
         self.filename = filename
         self.hdf5 = h5py.File(filename, 'r')
         self.info = self.parser()
-        self.data = self.info['RawData/Samples'].T
+        self.data = self.info['RawData/Samples'].T * 1e-6
         self.ch_names = list(self.info['RawData/AcquisitionTaskDescription']['ChannelProperties']['ChannelName'])
-        # self.ch_types = list(self.info['RawData/AcquisitionTaskDescription']['ChannelProperties']['ChannelType'])
         self.ch_types = ['eeg' for x in range(32)]
         self.sfreq = self.info['RawData/AcquisitionTaskDescription']['SamplingFrequency']
 
