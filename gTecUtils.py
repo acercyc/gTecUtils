@@ -5,9 +5,6 @@ import numpy as np
 import pandas as pd
 from lxml import etree
 import xml.etree.ElementTree as ET
-import scipy.io
-
-# %%
 
 
 class gTecDataset:
@@ -22,8 +19,8 @@ class gTecDataset:
                 self.info['RawData/AcquisitionTaskDescription/ChannelProperties']['ChannelName'])
             self.ch_types = list(
                 self.info['RawData/AcquisitionTaskDescription/ChannelProperties']['ChannelType'])
-            if np.isnan(self.ch_types[0]):
-                self.loadChanInfo_standard()                
+            if type(self.ch_types[0]) is not str:
+                self.loadChanInfo_standard()
         else:
             self.loadChanInfo_standard()
 
@@ -65,7 +62,7 @@ class gTecDataset:
     def loadChanInfo(self, fn=None):
         if fn is None:
             fn = './settings/montage_EEGonly_32ch.xml'
-        chanInfo = montageParser(fn)
+            chanInfo = montageParser(fn)
 
     def loadChanInfo_standard(self, ch_names=True, ch_types=True):
         if ch_names:
@@ -78,8 +75,8 @@ class gTecDataset:
 
     def toMNE(self):
         ''' Convert data into MNE RawArray format'''
-        info = mne.create_info(self.ch_names, self.sfreq, self.ch_types)
-        return mne.io.RawArray(self.data, info)
+        info = mne.create_info(self.ch_names[:32], self.sfreq, self.ch_types[:32])
+        return mne.io.RawArray(self.data[:32, :], info)
 
     # def __del__(self):
     #     self.hdf5.close()
