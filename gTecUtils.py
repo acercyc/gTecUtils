@@ -6,6 +6,8 @@ import pandas as pd
 from lxml import etree
 import xml.etree.ElementTree as ET
 
+chanInfo_fpath = './settings/montage_EEGonly_32ch.xml'
+
 
 class gTecDataset:
     def __init__(self, filename):
@@ -31,7 +33,8 @@ class gTecDataset:
         else:
             v = getValueFromXML(
                 self.hdf5['RawData']['AcquisitionTaskDescription'][0], 'SamplingFrequency')
-            self.sfreq = int(v)
+            self.sfreq = int(v)            
+
 
     def parser(self):
         """ Parse g.tec hdr5 format using h5py and lxml """
@@ -59,11 +62,6 @@ class gTecDataset:
         self.hdf5.visititems(inner)
         return dataDict
 
-    def loadChanInfo(self, fn=None):
-        if fn is None:
-            fn = './settings/montage_EEGonly_32ch.xml'
-            chanInfo = montageParser(fn)
-
     def loadChanInfo_standard(self, ch_names=True, ch_types=True):
         if ch_names:
             self.ch_names = ['FP1', 'FP2', 'AF3', 'AF4', 'F7', 'F3', 'Fz', 'F4',
@@ -75,8 +73,20 @@ class gTecDataset:
 
     def toMNE(self):
         ''' Convert data into MNE RawArray format'''
-        info = mne.create_info(self.ch_names[:32], self.sfreq, self.ch_types[:32])
-        return mne.io.RawArray(self.data[:32, :], info)
+        info = mne.create_info(
+            self.ch_names[:32], self.sfreq, self.ch_types[:32])
+        raw = mne.io.RawArray(self.data[:32, :], info)
+        
+        # load montage
+        try:
+            m = loadMontage()
+        except Exception as ex:
+            print('warning: can not retrive montage. Use MNE 10-20 standard')
+            print(ex)
+            m = mne.channels.make_standard_montage('standard_1020')
+            
+        raw = raw.set_montage(m, match_case=False)
+        return raw
 
     # def __del__(self):
     #     self.hdf5.close()
@@ -134,8 +144,22 @@ def montageParser(filename):
             v = 'None'
         else:
             raise ValueError("can't recognize type")
-
-        print(v)
         d[c.tag] = v
 
     return d
+
+
+def loadMontage(fn=None):
+    """load g.tec Montage file to MNE Montage class"""
+    
+    if fn is None:
+        fn = chanInfo_fpath
+    chanInfo = montageParser(fn)
+    cXYZ = dict()
+    for i, cName in enumerate(chanInfo['electrodename']):
+        xyz = np.array([chanInfo['xposition'][i],
+                        chanInfo['yposition'][i],
+                        chanInfo['zposition'][i]])
+        cXYZ[cName] = xyz.astype(np.float32) / 1000
+
+    return mne.channels.make_dig_montage(cXYZ)
