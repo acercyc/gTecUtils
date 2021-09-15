@@ -33,8 +33,7 @@ class gTecDataset:
         else:
             v = getValueFromXML(
                 self.hdf5['RawData']['AcquisitionTaskDescription'][0], 'SamplingFrequency')
-            self.sfreq = int(v)            
-
+            self.sfreq = int(v)
 
     def parser(self):
         """ Parse g.tec hdr5 format using h5py and lxml """
@@ -71,25 +70,32 @@ class gTecDataset:
         if ch_types:
             self.ch_types = ['eeg' for x in range(32)]
 
-    def toMNE(self):
-        ''' Convert data into MNE RawArray format'''
-        info = mne.create_info(
-            self.ch_names[:32], self.sfreq, self.ch_types[:32])
-        raw = mne.io.RawArray(self.data[:32, :], info)
+    def toMNE(self, ch_range=None):
+        ''' Convert data into MNE RawArray format 
+        if ch_range is None, use 0~31 channels 
+        '''
         
+        if ch_range is None:
+            ch_range = range(32)
+        
+        ch_names = [self.ch_names[v] for v in ch_range]
+        ch_types = [self.ch_types[v] for v in ch_range]
+        data = self.data[ch_range, :]
+        
+        info = mne.create_info(ch_names, self.sfreq, ch_types)
+        raw = mne.io.RawArray(data, info)
+
         # load montage
         try:
             m = loadMontage()
         except Exception as ex:
-            print('warning: can not retrive montage. Use MNE 10-20 standard')
+            print('warning: can not retrive montage. Use MNE standard_1020')
             print(ex)
             m = mne.channels.make_standard_montage('standard_1020')
-            
+
         raw = raw.set_montage(m, match_case=False)
         return raw
-
-    # def __del__(self):
-    #     self.hdf5.close()
+    
 
 
 def xmlParser(xmlObj):
@@ -151,7 +157,7 @@ def montageParser(filename):
 
 def loadMontage(fn=None):
     """load g.tec Montage file to MNE Montage class"""
-    
+
     if fn is None:
         fn = chanInfo_fpath
     chanInfo = montageParser(fn)
